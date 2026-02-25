@@ -19,6 +19,7 @@ def perf_lab(
     negative_cols: Optional[List[str]] = None,  # check <0 (for qty/price)
     sample: bool = False,                 # show small sample
     notes: Optional[str] = None,
+    emit_view: Optional[str] = None,
     max_nulls: int = 0,
     max_negatives: int = 0,
     require_distinct_keys: bool = True,
@@ -148,7 +149,39 @@ def perf_lab(
     metrics["issues"] = issues
     print(f"Status: {status}" + (f" | Issues: {issues}" if issues else ""))
 
+    if emit_view:
+        _append_metrics_to_view(metrics, emit_view)
+
     return metrics
+
+def _append_metrics_to_view(metrics: Dict[str, Any], view_name: str) -> None:
+    import json
+    from pyspark.sql import SparkSession
+    spark = SparkSession.getActiveSession()
+    if spark is None:
+        return
+    # Flatten complex types to JSON strings to avoid schema inference conflicts
+    flat = {}
+    for k, v in metrics.items():
+        if isinstance(v, (dict, list, tuple)):
+            flat[k] = json.dumps(v, ensure_ascii=False)
+        else:
+            flat[k] = v
+    df = spark.createDataFrame([flat])
+    v = view_name
+    if v.startswith("global_temp."):
+        vname = v.split(".", 1)[1]
+        full = v
+    else:
+        vname = v
+        full = f"global_temp.{v}"
+    try:
+        existing = spark.table(full)
+        df = existing.unionByName(df, allowMissingColumns=True)
+    except Exception:
+        pass
+    df.createOrReplaceGlobalTempView(vname)
+
 
 
 def perf_delta(before: int, after: int, label: str) -> Dict[str, Any]:
