@@ -37,5 +37,10 @@ dbutils.notebook.run("./03_join_window", 120)
 print("✓ Wide Layer erstellt")
 show_view("global_temp.sales_wide_silver")
 
+# Gold
+dbutils.notebook.run("./05_gold_kpis", 120)
+print("✓ Gold KPIs erstellt")
+show_view("global_temp.gold_kpis")
+
 # Perf summary
 show_perf("global_temp.perf_metrics", limit=100)
