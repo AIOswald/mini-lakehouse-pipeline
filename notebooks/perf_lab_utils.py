@@ -168,19 +168,25 @@ def _append_metrics_to_view(metrics: Dict[str, Any], view_name: str) -> None:
         else:
             flat[k] = v
     df = spark.createDataFrame([flat])
-    v = view_name
-    if v.startswith("global_temp."):
-        vname = v.split(".", 1)[1]
-        full = v
+    target = view_name.strip()
+
+    # UC path: when a catalog/schema/table or schema/table identifier is provided.
+    # Fallback: session temp view for single-name targets.
+    if "." in target and not target.startswith("global_temp."):
+        try:
+            existing = spark.table(target)
+            df = existing.unionByName(df, allowMissingColumns=True)
+        except Exception:
+            pass
+        df.write.mode("overwrite").format("delta").saveAsTable(target)
     else:
-        vname = v
-        full = f"global_temp.{v}"
-    try:
-        existing = spark.table(full)
-        df = existing.unionByName(df, allowMissingColumns=True)
-    except Exception:
-        pass
-    df.createOrReplaceGlobalTempView(vname)
+        vname = target.split(".", 1)[1] if target.startswith("global_temp.") else target
+        try:
+            existing = spark.table(f"global_temp.{vname}")
+            df = existing.unionByName(df, allowMissingColumns=True)
+        except Exception:
+            pass
+        df.createOrReplaceTempView(vname)
 
 
 

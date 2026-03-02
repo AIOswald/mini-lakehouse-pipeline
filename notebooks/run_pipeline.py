@@ -53,14 +53,6 @@ dbutils.notebook.run("./05_gold_kpis", NOTEBOOK_TIMEOUT_S, NOTEBOOK_ARGS)
 print("✓ Gold KPIs erstellt")
 show_view(tn("gold_kpis"))
 
-# Perf metrics aus global_temp in UC materialisieren (falls vorhanden)
-try:
-    perf_df = spark.table("global_temp.perf_metrics")
-    perf_df.write.mode("overwrite").format("delta").saveAsTable(PERF_TABLE)
-    print(f"Perf metrics materialized: {PERF_TABLE}")
-except Exception as e:
-    print(f"Perf metrics table not materialized: {e}")
-
 # Perf summary
 try:
     show_perf(PERF_TABLE, limit=100)
