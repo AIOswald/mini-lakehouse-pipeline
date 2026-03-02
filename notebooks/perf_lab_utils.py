@@ -182,7 +182,14 @@ def _append_metrics_to_view(metrics: Dict[str, Any], view_name: str) -> None:
         df = existing.unionByName(df, allowMissingColumns=True)
     except Exception:
         pass
-    df.write.mode("overwrite").format("delta").saveAsTable(target_table)
+    (
+        df.write
+        .mode("overwrite")
+        .format("delta")
+        .option("mergeSchema", "true")
+        .option("overwriteSchema", "true")
+        .saveAsTable(target_table)
+    )
 
 
 
