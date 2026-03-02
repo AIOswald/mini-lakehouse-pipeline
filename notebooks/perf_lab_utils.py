@@ -170,23 +170,19 @@ def _append_metrics_to_view(metrics: Dict[str, Any], view_name: str) -> None:
     df = spark.createDataFrame([flat])
     target = view_name.strip()
 
-    # UC path: when a catalog/schema/table or schema/table identifier is provided.
-    # Fallback: session temp view for single-name targets.
-    if "." in target and not target.startswith("global_temp."):
-        try:
-            existing = spark.table(target)
-            df = existing.unionByName(df, allowMissingColumns=True)
-        except Exception:
-            pass
-        df.write.mode("overwrite").format("delta").saveAsTable(target)
+    # Always persist metrics as UC-backed Delta table.
+    if "." in target:
+        target_table = target
     else:
-        vname = target.split(".", 1)[1] if target.startswith("global_temp.") else target
-        try:
-            existing = spark.table(f"global_temp.{vname}")
-            df = existing.unionByName(df, allowMissingColumns=True)
-        except Exception:
-            pass
-        df.createOrReplaceTempView(vname)
+        cur = spark.sql("SELECT current_catalog() AS c, current_schema() AS s").first()
+        target_table = f"{cur['c']}.{cur['s']}.{target}"
+
+    try:
+        existing = spark.table(target_table)
+        df = existing.unionByName(df, allowMissingColumns=True)
+    except Exception:
+        pass
+    df.write.mode("overwrite").format("delta").saveAsTable(target_table)
 
 
 
