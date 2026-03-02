@@ -1,3 +1,4 @@
+%python
 SHOW_VIEWS = False
 SHOW_PERF_SUMMARY = True
 CATALOG = spark.sql("SELECT current_catalog()").first()[0]
