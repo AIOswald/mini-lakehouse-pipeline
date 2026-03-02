@@ -168,19 +168,28 @@ def _append_metrics_to_view(metrics: Dict[str, Any], view_name: str) -> None:
         else:
             flat[k] = v
     df = spark.createDataFrame([flat])
-    v = view_name
-    if v.startswith("global_temp."):
-        vname = v.split(".", 1)[1]
-        full = v
+    target = view_name.strip()
+
+    # Always persist metrics as UC-backed Delta table.
+    if "." in target:
+        target_table = target
     else:
-        vname = v
-        full = f"global_temp.{v}"
+        cur = spark.sql("SELECT current_catalog() AS c, current_schema() AS s").first()
+        target_table = f"{cur['c']}.{cur['s']}.{target}"
+
     try:
-        existing = spark.table(full)
+        existing = spark.table(target_table)
         df = existing.unionByName(df, allowMissingColumns=True)
     except Exception:
         pass
-    df.createOrReplaceGlobalTempView(vname)
+    (
+        df.write
+        .mode("overwrite")
+        .format("delta")
+        .option("mergeSchema", "true")
+        .option("overwriteSchema", "true")
+        .saveAsTable(target_table)
+    )
 
 
 
