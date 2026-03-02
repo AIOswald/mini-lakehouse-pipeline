@@ -21,21 +21,22 @@ def show_perf(name: str, limit: int = 10):
 
 NOTEBOOK_ARGS = {"catalog": CATALOG, "schema": SCHEMA}
 PERF_TABLE = tn("perf_metrics")
+NOTEBOOK_TIMEOUT_S = 0  # 0 = kein Timeout
 
 # Setup
-dbutils.notebook.run("./00_setup_data", 60, NOTEBOOK_ARGS)
+dbutils.notebook.run("./00_setup_data", NOTEBOOK_TIMEOUT_S, NOTEBOOK_ARGS)
 print("✓ Setup abgeschlossen")
 print(f"Using UC target: {CATALOG}.{SCHEMA}")
 
 # Bronze
-dbutils.notebook.run("./01_ingest_bronze", 60, NOTEBOOK_ARGS)
+dbutils.notebook.run("./01_ingest_bronze", NOTEBOOK_TIMEOUT_S, NOTEBOOK_ARGS)
 print("✓ Bronze Layer erstellt")
 show_view(tn("customers_bronze"))
 show_view(tn("orders_bronze"))
 show_view(tn("order_items_bronze"))
 
 # Silver
-dbutils.notebook.run("./02_clean_silver", 120, NOTEBOOK_ARGS)
+dbutils.notebook.run("./02_clean_silver", NOTEBOOK_TIMEOUT_S, NOTEBOOK_ARGS)
 print("✓ Silver Layer erstellt")
 
 show_view(tn("customers_silver"))
@@ -43,12 +44,12 @@ show_view(tn("orders_silver"))
 show_view(tn("order_items_silver"))
 
 # Join
-dbutils.notebook.run("./03_join_window", 120, NOTEBOOK_ARGS)
+dbutils.notebook.run("./03_join_window", NOTEBOOK_TIMEOUT_S, NOTEBOOK_ARGS)
 print("✓ Wide Layer erstellt")
 show_view(tn("sales_wide_silver"))
 
 # Gold
-dbutils.notebook.run("./05_gold_kpis", 120, NOTEBOOK_ARGS)
+dbutils.notebook.run("./05_gold_kpis", NOTEBOOK_TIMEOUT_S, NOTEBOOK_ARGS)
 print("✓ Gold KPIs erstellt")
 show_view(tn("gold_kpis"))
 
